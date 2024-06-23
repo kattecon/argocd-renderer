@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: test-20-app
+  namespace: prod-argocd
+spec:
+  destination:
+    namespace: dev
+    server: https://kubernetes.default.svc
+  sources:
+  - path: a-path
+    repoURL: some-url-k
+    targetRevision: rev3
+---
+apiVersion: null
+kind: my-kind
+metadata:
+  name: name1-1
+  namespace: zzz-ns
+patched: this-comes-from-the-patch
+---
+apiVersion: null
+kind: my-kind
+metadata:
+  name: name1-2
+  namespace: zzz-ns
+patched: this-comes-from-the-patch
+---
+apiVersion: null
+kind: my-kind
+metadata:
+  name: name2-1
+  namespace: zzz-ns
+patched: this-comes-from-the-patch

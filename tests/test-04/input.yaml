@@ -1,0 +1,64 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: test-04-app-1
+  namespace: dev
+
+spec:
+  destination:
+    namespace: dev-test-04
+    server: https://kubernetes.default.svc
+
+  sources:
+    - path: abc
+      repoURL: some-url
+      targetRevision: rev2
+
+      helm:
+        releaseName: test-04-app-release-name-1
+
+        parameters:
+          - name: "v1"
+            value: 123
+          - name: "v2"
+            value: "True"
+
+    - path: abc
+      repoURL: some-url
+      targetRevision: rev2
+
+      helm:
+        releaseName: test-04-app-release-name-2
+
+        parameters:
+          - name: "v1"
+            value: "1234"
+          - name: "v2"
+            value: True
+
+    - path: abc
+      repoURL: some-url
+      targetRevision: rev2
+
+      helm:
+        releaseName: test-04-app-release-name-3
+
+        fileParameters:
+          - name: "v1"
+            path: "../v1-example-file"
+          - name: "v2"
+            path: "../v2-example-file"
+
+    - path: abc
+      repoURL: some-url
+      targetRevision: rev2
+
+      helm:
+        releaseName: test-04-app-release-name-4
+
+        values: |
+          v1: "zzzz"
+
+        valueFiles:
+          - "../example-values-file-with-v2.yaml"

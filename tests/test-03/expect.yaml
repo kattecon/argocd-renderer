@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: test-03-app
+  namespace: prod-argocd
+spec:
+  destination:
+    namespace: prod
+    server: https://kubernetes.default.svc
+  sources:
+  - path: app-tmpl
+    repoURL: some-url
+    targetRevision: rev2
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-abc
+  namespace: xxx-argocd
+spec:
+  destination:
+    namespace: xxx
+    server: https://kubernetes.default.svc
+  source:
+    helm:
+      valuesObject:
+        v1: app-tmpl-v1
+        v2: app-tmpl-v2
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff-app-tmpl
+metadata:
+  name: something
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: app-abc-app-tmpl-v1-app-tmpl-v2

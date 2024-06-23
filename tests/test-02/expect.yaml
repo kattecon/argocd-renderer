@@ -1,0 +1,55 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: test-02-app-1
+  namespace: prod-argocd
+spec:
+  destination:
+    namespace: prod
+    server: https://kubernetes.default.svc
+  project: prod-prj
+  sources:
+  - helm:
+      valuesObject:
+        v1: someA
+        v2: someB
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: test-02-app-2
+  namespace: prod-argocd
+spec:
+  destination:
+    namespace: prod
+    server: https://kubernetes.default.svc
+  project: prod-prj
+  sources:
+  - helm:
+      valuesObject:
+        v1: someC
+        v2: someD
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: test-02-app-1-someA-someB
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: test-02-app-2-someC-someD
