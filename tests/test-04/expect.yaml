@@ -1,0 +1,70 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: test-04-app-1
+  namespace: dev
+spec:
+  destination:
+    namespace: dev-test-04
+    server: https://kubernetes.default.svc
+  sources:
+  - helm:
+      parameters:
+      - name: v1
+        value: 123
+      - name: v2
+        value: 'True'
+      releaseName: test-04-app-release-name-1
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+  - helm:
+      parameters:
+      - name: v1
+        value: '1234'
+      - name: v2
+        value: true
+      releaseName: test-04-app-release-name-2
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+  - helm:
+      fileParameters:
+      - name: v1
+        path: ../v1-example-file
+      - name: v2
+        path: ../v2-example-file
+      releaseName: test-04-app-release-name-3
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+  - helm:
+      releaseName: test-04-app-release-name-4
+      valueFiles:
+      - ../example-values-file-with-v2.yaml
+      values: 'v1: "zzzz"
+
+        '
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: test-04-app-release-name-1-123-True
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: test-04-app-release-name-2-1234-true
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: test-04-app-release-name-3-from-v1-example-file-from-v2-example-file
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: test-04-app-release-name-4-zzzz-v2v2v2

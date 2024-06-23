@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: test-01-app
+  namespace: dev
+
+spec:
+  destination:
+    namespace: dev
+    server: https://kubernetes.default.svc
+
+  project: test-prj
+
+  source:
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+
+    helm:
+      valuesObject:
+        v1: value1
+        v2: value2
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

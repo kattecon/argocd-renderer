@@ -1,0 +1,10 @@
+resources:
+  - 1.yaml
+  - 2.yaml
+
+namespace: zzz-ns
+
+patches:
+  - path: kustomization-patch.yaml
+    target:
+      kind: my-kind

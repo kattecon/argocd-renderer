@@ -1,0 +1,13 @@
+kind: my-kind
+metadata:
+  name: name1-1
+
+spec: s1
+
+---
+
+kind: my-kind
+metadata:
+  name: name1-2
+
+spec: s2

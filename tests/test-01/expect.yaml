@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: test-01-app
+  namespace: dev
+spec:
+  destination:
+    namespace: dev
+    server: https://kubernetes.default.svc
+  project: test-prj
+  source:
+    helm:
+      valuesObject:
+        v1: value1
+        v2: value2
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: test-01-app-value1-value2

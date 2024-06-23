@@ -1,0 +1,5 @@
+apiVersion: some-stuff/v1
+kind: CustomStuff-app-tmpl
+
+metadata:
+  name: "something"

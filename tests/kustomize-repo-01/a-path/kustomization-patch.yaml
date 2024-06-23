@@ -1,0 +1,5 @@
+kind: my-kind
+metadata:
+  name: name
+
+patched: this-comes-from-the-patch

@@ -1,0 +1,5 @@
+apiVersion: some-stuff/v1
+kind: CustomStuff
+
+metadata:
+  name: "{{ .Release.Name }}-{{ .Values.v1 | required "v1 is required" }}-{{ .Values.v2 | required "v2 is required" }}"

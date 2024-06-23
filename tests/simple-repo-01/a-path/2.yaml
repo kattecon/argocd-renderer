@@ -1,0 +1,5 @@
+kind: my-kind
+metadata:
+  name: name2-1
+
+spec: s2222

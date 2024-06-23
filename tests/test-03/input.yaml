@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: test-03-app
+  namespace: prod-argocd
+
+spec:
+  destination:
+    namespace: prod
+    server: https://kubernetes.default.svc
+
+  sources:
+    - path: app-tmpl
+      repoURL: some-url
+      targetRevision: rev2

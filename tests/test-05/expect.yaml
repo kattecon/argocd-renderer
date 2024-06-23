@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: test-05-app
+  namespace: prod-argocd
+spec:
+  destination:
+    namespace: prod
+  sources:
+  - helm:
+      valuesObject:
+        v1: xx
+        v2: yy
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: test-05-app-via-arg-arg-yy

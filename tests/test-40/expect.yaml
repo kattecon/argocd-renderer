@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: test-40-app
+  namespace: prod-argocd
+spec:
+  destination:
+    namespace: dev
+    server: https://kubernetes.default.svc
+  sources:
+  - path: a-path
+    repoURL: https://example.com
+    targetRevision: HEAD
+---
+kind: my-kind
+metadata:
+  name: name1-1
+spec: s1
+---
+kind: my-kind
+metadata:
+  name: name1-2
+spec: s2
+---
+kind: my-kind
+metadata:
+  name: name2-1
+spec: s2222
