@@ -37,7 +37,9 @@ def resolve_repo(*, url: str, revision: str, temp_dir: str) -> None:
 
     if repo_resolver:
         print("    Checking the repo path...", flush=True)
-        return exec_capture_output([repo_resolver, url, revision, temp_dir]).strip()
+        path = exec_capture_output([repo_resolver, url, revision, temp_dir]).strip()
+        path = os.path.abspath(path)
+        return path
     else:
         return ""
 
@@ -509,7 +511,7 @@ class ArgocdRenderer:
         # Run 'helm template'.
         helm_args = ["helm", "template", "--dry-run", "--dependency-update"]
 
-        if source.chart != "":
+        if source.chart:
             helm_args += ["--repo", source.repo_url]
 
         for value_file in source.helm.value_files:
