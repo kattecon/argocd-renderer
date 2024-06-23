@@ -8,6 +8,7 @@
         "getuid",
         "kustomization",
         "kustomize",
+        "kyverno",
         "PYTHONUNBUFFERED",
         "realpath",
         "TLDR",

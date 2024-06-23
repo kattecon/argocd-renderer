@@ -181,12 +181,14 @@ class ArgocdAppSource:
     def from_resource(resource: dict) -> "ArgocdAppSource":
         err_path = ".spec.source(s)"
         repo_url = get_str(resource, "repoURL", err_path=err_path, req=True)
-        path = get_str(resource, "path", err_path=err_path, req=True)
+        path = get_str(resource, "path", err_path=err_path, req=False)
         target_revision = get_str(
             resource, "targetRevision", err_path=err_path, req=True
         )
 
         chart = get_str(resource, "chart", err_path=err_path, req=False)
+        if chart is None and path is None:
+            raise ValueError(f"Either 'chart' or 'path' must be given")
 
         helm = get_dict(resource, "helm", err_path=err_path, req=False)
         if helm is not None:
@@ -371,7 +373,7 @@ class ArgocdRenderer:
 
         for source in app.sources:
             print(
-                f"  Source:  {repr(source.repo_url)} @ {repr(source.target_revision)}  path: {repr(source.path)}"
+                f"  Source:  {repr(source.repo_url)} @ {repr(source.target_revision)}  /  {repr(source.path or source.chart)}"
             )
 
             with tempfile.TemporaryDirectory(prefix=APP_NAME) as temp_dir:
@@ -535,7 +537,7 @@ class ArgocdRenderer:
         try:
             helm_args.append(source.helm.release_name or app.name)
 
-            if source.chart == "":
+            if source.chart:
                 helm_args.append(source.chart)
             else:
                 chart_path = resolved_repo_path + "/" + source.path
