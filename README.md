@@ -70,8 +70,8 @@ See the [repo-resolver.sh](./tests/repo-resolver.sh) script for an example.
 - kubectl is required for kustomize to work.
 - Helm is required to render Helm charts.
 
-Installation is not required. Just download [the script](./argocd-renderer.py)
-and enjoy.
+Installation is not required. Just a release [release](https://github.com/kattecon/argocd-renderer/releases)
+of [the script](./argocd-renderer.py) and enjoy.
 
 ## Command line arguments
 
