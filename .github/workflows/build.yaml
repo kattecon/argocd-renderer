@@ -20,7 +20,7 @@ name: "Build"
         description: Use this string as version in the application.
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
