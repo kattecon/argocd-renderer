@@ -19,15 +19,15 @@ REVISION="$2"
 TEMP_DIR="$3"
 
 if [ "$REPO_URL" = "some-url" -a "$REVISION" = "rev2" ]; then
-    RESULT="$(pwd)/helm-repo-01"
+    RESULT="./tests/helm-repo-01"
 fi
 
 if [ "$REPO_URL" = "some-url-k" -a "$REVISION" = "rev3" ]; then
-    RESULT="$(pwd)/kustomize-repo-01"
+    RESULT="./tests/kustomize-repo-01"
 fi
 
 if [ "$REPO_URL" = "https://example.com" -a "$REVISION" = "HEAD" ]; then
-    RESULT="$(pwd)/simple-repo-01"
+    RESULT="./tests/simple-repo-01"
 fi
 
 if [ -n "$RESULT" ]; then

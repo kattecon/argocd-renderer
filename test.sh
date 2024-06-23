@@ -4,14 +4,18 @@ cd "$(dirname "$(realpath "$0")")"
 
 yamllint -s -f standard . || exit 99
 
+sep() {
+    echo ""
+    echo "-------------------------------------------------------------------------"
+    echo "$@"
+    echo ""
+}
+
 test() {
     name="$1"
     shift
 
-    echo ""
-    echo "-------------------------------------------------------------------------"
-    echo "Checking '$name'..."
-    echo ""
+    sep "$@"
 
     ./argocd-renderer.py \
         "$@" \
