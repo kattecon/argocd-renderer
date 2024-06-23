@@ -1,7 +1,9 @@
 # argocd-renderer
 
 This is a simple Python script for rendering ArgoCD application manifests
-the same way ArgoCD would do it.
+the same way ArgoCD would do it. This can be useful for using
+in a CI/CD pipeline for further validation
+with [kyverno](https://github.com/kyverno/kyverno) or any other tool.
 
 The script processes a given resource YAML file as input and writes the results to
 an output file. It accomplishes this by copying all the original resources
