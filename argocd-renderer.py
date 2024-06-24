@@ -222,8 +222,8 @@ class ArgocdApp:
     src_file: str
     id: str
     name: str
-    namespace: str
-    destination_namespace: str
+    namespace: Union[str, None]
+    destination_namespace: Union[str, None]
     sources: List[ArgocdAppSource]
 
     @staticmethod
@@ -239,11 +239,6 @@ class ArgocdApp:
             or resource_ctx.target_namespace
         )
 
-        if type(namespace) is not str:
-            raise ValueError(
-                ".metadata.namespace is required for argocd application (or it must be given as target_namespace)"
-            )
-
         spec = get_dict(resource, "spec", err_path="", req=True)
 
         sources = get_list(spec, "sources", err_path=".spec", req=False)
@@ -257,13 +252,13 @@ class ArgocdApp:
 
         sources = [ArgocdAppSource.from_resource(source) for source in sources]
 
-        destination = get_dict(spec, "destination", err_path=".spec", req=True)
+        destination = get_dict(spec, "destination", err_path=".spec", req=False) or {}
         destination_namespace = get_str(
-            destination, "namespace", err_path=".spec.destination", req=True
+            destination, "namespace", err_path=".spec.destination", req=False
         )
 
         return ArgocdApp(
-            id=f"{namespace}/{name}" or name,
+            id=f"{namespace or ''}/{name}" or name,
             name=name,
             namespace=namespace,
             sources=sources,
@@ -284,7 +279,7 @@ class ArgocdRenderer:
         pass
 
     def process_file(
-        self, *, resources_file: str, target_namespace: str
+        self, *, resources_file: str, target_namespace: Union[str, None]
     ) -> "ArgocdRenderer":
         self.__queue_resources_for_processing(
             resources=parse_yaml_file(resources_file),
@@ -316,7 +311,7 @@ class ArgocdRenderer:
         return self
 
     def __queue_resources_for_processing(
-        self, *, resources: List[dict], target_namespace: str, origin: str
+        self, *, resources: List[dict], target_namespace: Union[str, None], origin: str
     ) -> "ArgocdRenderer":
         for resource in resources:
             self.__pending_resources.append(
@@ -330,7 +325,7 @@ class ArgocdRenderer:
         return self
 
     def __queue_all_resource_files_in_dir_rec(
-        self, *, base_dir: str, dir_origin: str, target_namespace: str
+        self, *, base_dir: str, dir_origin: str, target_namespace: Union[str, None]
     ) -> None:
         walk = list(os.walk(base_dir))
         walk.sort(key=lambda x: x[0])
@@ -520,11 +515,12 @@ class ArgocdRenderer:
         for value_file in source.helm.value_files:
             helm_args += ["--values", value_file]
 
+        if app.destination_namespace:
+            helm_args += ["--namespace", app.destination_namespace]
+
         helm_args += [
             "--version",
             source.target_revision,
-            "--namespace",
-            app.destination_namespace,
             "--values",
             values_file,
             "--output-dir",

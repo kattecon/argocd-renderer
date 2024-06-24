@@ -4,8 +4,6 @@ metadata:
   name: test-05-app
   namespace: prod-argocd
 spec:
-  destination:
-    namespace: prod
   sources:
   - chart: kyverno-policies
     helm:
