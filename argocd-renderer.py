@@ -18,7 +18,9 @@ import tempfile
 import yaml
 
 from dataclasses import dataclass
-from typing import Type, Union
+
+# Python pre 3.9 doesn't support list[str], but works with List[str].
+from typing import List, Type, Union, Tuple
 
 
 APP_NAME = "ak-argocd-renderer"
@@ -28,7 +30,7 @@ APP_NAME = "ak-argocd-renderer"
 # Utils.
 
 
-def exec_capture_output(cmd_args: list[str]) -> str:
+def exec_capture_output(cmd_args: List[str]) -> str:
     return subprocess.check_output(cmd_args, text=True)
 
 
@@ -44,7 +46,7 @@ def resolve_repo(*, url: str, revision: str, temp_dir: str) -> None:
         return ""
 
 
-def parse_yaml_file(yaml_file: str) -> list[dict]:
+def parse_yaml_file(yaml_file: str) -> List[dict]:
     try:
         with open(yaml_file, "r") as file:
             return list(yaml.full_load_all(file))
@@ -97,19 +99,20 @@ def dump_as_yaml_for_debug(d: dict, *, indent: str) -> None:
 # Models.
 
 
-@dataclass(frozen=True, kw_only=True)
+# NOTE: No kw_args in dataclasses because older python versions don't support it.
+@dataclass(frozen=True)
 class ResourceCtx:
     origin: str
     target_namespace: Union[str, None]
     resource: dict
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True)
 class ArgocdAppSourceHelm:
     values: dict
     release_name: Union[str, None] = None
-    file_parameters: list[(str, str)] = dataclasses.field(default_factory=list)
-    value_files: list[str] = dataclasses.field(default_factory=list)
+    file_parameters: List[Tuple[str, str]] = dataclasses.field(default_factory=list)
+    value_files: List[str] = dataclasses.field(default_factory=list)
 
     @staticmethod
     def from_resource(resource: dict) -> "ArgocdAppSourceHelm":
@@ -170,7 +173,7 @@ class ArgocdAppSourceHelm:
         )
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True)
 class ArgocdAppSource:
     repo_url: str
     path: str
@@ -214,14 +217,14 @@ class ArgocdAppSource:
         )
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True)
 class ArgocdApp:
     src_file: str
     id: str
     name: str
     namespace: str
     destination_namespace: str
-    sources: list[ArgocdAppSource]
+    sources: List[ArgocdAppSource]
 
     @staticmethod
     def from_resource(resource_ctx: ResourceCtx) -> "ArgocdApp":
@@ -275,8 +278,8 @@ class ArgocdApp:
 
 class ArgocdRenderer:
     def __init__(self) -> str:
-        self.__pending_resources: list[ResourceCtx] = []
-        self.__result_resources: list[dict] = []
+        self.__pending_resources: List[ResourceCtx] = []
+        self.__result_resources: List[dict] = []
         self.__processing = False
         pass
 
@@ -313,7 +316,7 @@ class ArgocdRenderer:
         return self
 
     def __queue_resources_for_processing(
-        self, *, resources: list[dict], target_namespace: str, origin: str
+        self, *, resources: List[dict], target_namespace: str, origin: str
     ) -> "ArgocdRenderer":
         for resource in resources:
             self.__pending_resources.append(

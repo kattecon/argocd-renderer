@@ -67,6 +67,9 @@ See the [repo-resolver.sh](./tests/repo-resolver.sh) script for an example.
 ## Installation and requirements
 
 - Python 3 is required.
+- PyYaml is required (`pip3 install pyyaml`
+  or `sudo apt-get install python3-yaml`, github runner usually have this
+  library already installed).
 - kubectl is required for kustomize to work.
 - Helm is required to render Helm charts.
 
