@@ -6,8 +6,10 @@ metadata:
   namespace: prod-argocd
 
 spec:
-  destination:
-    namespace: prod
+  # Destination is not really needed.
+  # The destination can be default, and the resources can be cluster-wide...
+  #destination:
+  #  namespace: prod
 
   sources:
     - chart: kyverno-policies

@@ -15,7 +15,7 @@ test() {
     name="$1"
     shift
 
-    sep "$@"
+    sep
 
     ./argocd-renderer.py \
         "$@" \
