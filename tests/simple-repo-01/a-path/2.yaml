@@ -1,3 +1,10 @@
+---
+
+# ... nothing is here ... but it looks like it is OK... and should just be ignored...
+# See similar issue here: https://github.com/kubernetes-sigs/kustomize/issues/178
+
+---
+
 kind: my-kind
 metadata:
   name: name2-1
