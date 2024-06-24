@@ -311,9 +311,17 @@ class ArgocdRenderer:
         return self
 
     def __queue_resources_for_processing(
-        self, *, resources: List[dict], target_namespace: Union[str, None], origin: str
+        self, *, resources: List[any], target_namespace: Union[str, None], origin: str
     ) -> "ArgocdRenderer":
         for resource in resources:
+            if resource is None:
+                continue
+
+            if type(resource) is not dict:
+                raise ValueError(
+                    f"The resource must be a dictionary, got {repr(resource)} in {repr(origin)}."
+                )
+
             self.__pending_resources.append(
                 ResourceCtx(
                     target_namespace=target_namespace,
