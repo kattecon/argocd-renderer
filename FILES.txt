@@ -1,0 +1,53 @@
+.editorconfig: EditorConfig file; enforces consistent coding style across editors/IDEs automatically.
+.markdownlint.jsonc: Markdownlint config; enforces Markdown style rules via CLI/IDE linting tools.
+.vscode/settings.json: VS Code workspace config; custom cSpell dictionary words; prevents false spell warnings.
+.yamllint.yaml: yamllint config; enforces YAML syntax/style rules via CLI; run by test.sh.
+argocd-renderer.py: Renders ArgoCD Apps→K8s resources for CI/CD validation; Helm/Kustomize/dir sources, recursive; no ArgoCD cluster needed.
+test.sh: Regression tests for argocd-renderer.py; validates Helm/Kustomize/dir sources via diff; yamllint + pre-commit.
+tests/kustomize-repo-01/a-path/1.yaml: Mock repo data; multi-doc YAML w/ K8s-style resources; for test-20 kustomize resource aggregation.
+tests/kustomize-repo-01/a-path/2.yaml: Mock repo data; single-doc YAML w/ K8s-style resource; for test-20 kustomize resource aggregation.
+tests/kustomize-repo-01/a-path/kustomization-patch.yaml: Mock repo data; Kustomize patch file applying field modifications; for test-20 patch feature validation.
+tests/kustomize-repo-01/a-path/kustomization.yaml: Mock repo data; Kustomize config w/ resources/namespace/patches; for test-20 kustomize rendering.
+tests/repo-resolver.sh: Mock repo resolver for tests; maps URL+revision to local test dirs; example impl of argocd-renderer.py -r hook.
+tests/simple-repo-01/a-path/1.yaml: Mock repo data; plain multi-doc YAML resources; for test-40 directory source.
+tests/simple-repo-01/a-path/2.yaml: Mock repo data; plain YAML w/ empty doc & comments; for test-40 edge case handling.
+tests/helm-repo-01/abc/Chart.yaml: Mock repo data; Helm chart metadata; defines abc chart for multiple Helm rendering tests.
+tests/helm-repo-01/abc/templates/v.yaml: Mock repo data; Helm template w/ value substitution & required fields; for multiple Helm rendering tests.
+tests/helm-repo-01/abc/values.yaml: Mock repo data; Helm chart default values; for multiple tests validating value override methods.
+tests/helm-repo-01/app-tmpl/Chart.yaml: Mock repo data; Helm chart metadata; defines app-tmpl chart for test-03 app-of-apps pattern test.
+tests/helm-repo-01/app-tmpl/templates/app-abc.yaml: Mock repo data; Helm template outputting nested ArgoCD App; for test-03 app-of-apps recursive rendering.
+tests/helm-repo-01/app-tmpl/templates/something.yaml: Mock repo data; Helm template outputting custom K8s resource; for test-03 multi-template chart rendering.
+tests/helm-repo-01/app-tmpl/values.yaml: Mock repo data; empty Helm values file; for test-03 app-of-apps pattern test.
+tests/helm-repo-01/example-values-file-with-v2.yaml: Mock repo data; Helm values YAML; for test-04 Helm valueFiles feature validation.
+tests/helm-repo-01/v1-example-file: Mock repo data; plain text file; for test-04 Helm fileParameters (--set-file) feature validation.
+tests/helm-repo-01/v2-example-file: Mock repo data; plain text file; for test-04 Helm fileParameters (--set-file) feature validation.
+tests/test-01/expect.yaml: Test expectation for test-01; expected output when rendering ArgoCD App w/ Helm valuesObject (basic inline values); run by test.sh.
+tests/test-01/input.yaml: Test input ArgoCD App for Helm valuesObject (basic inline values); run by test.sh.
+tests/test-01/result.tmp.yaml: Temp test output for test-01; actual renderer result; compared vs expect.yaml by test.sh for validation.
+tests/test-02/expect.yaml: Test expectation for test-02; expected output when rendering multi-doc ArgoCD Apps w/ Helm values; run by test.sh.
+tests/test-02/input.yaml: Test input ArgoCD Apps for multi-doc YAML w/ Helm valuesObject; run by test.sh.
+tests/test-02/result.tmp.yaml: Temp test output for test-02; actual renderer result; compared vs expect.yaml by test.sh for validation.
+tests/test-03/expect.yaml: Test expectation for test-03; expected output when rendering ArgoCD App w/ Helm app-of-apps pattern; run by test.sh.
+tests/test-03/input.yaml: Test input ArgoCD App for Helm app-of-apps pattern; run by test.sh.
+tests/test-03/result.tmp.yaml: Temp test output for test-03; actual renderer result; compared vs expect.yaml by test.sh for validation.
+tests/test-04/expect.yaml: Test expectation for test-04; expected output when rendering ArgoCD App w/ Helm params/files/values; run by test.sh.
+tests/test-04/input.yaml: Test input ArgoCD App for Helm params/fileParams/values/valueFiles features; run by test.sh.
+tests/test-04/result.tmp.yaml: Temp test output for test-04; actual renderer result; compared vs expect.yaml by test.sh for validation.
+tests/test-05/expect.yaml: Test expectation for test-05; expected output when rendering ArgoCD App w/ CLI Helm --set overrides; run by test.sh.
+tests/test-05/input.yaml: Test input ArgoCD App for CLI Helm --set arg overrides; run by test.sh.
+tests/test-05/result.tmp.yaml: Temp test output for test-05; actual renderer result; compared vs expect.yaml by test.sh for validation.
+tests/test-06/expect.yaml: Test expectation for test-06; expected output when rendering ArgoCD App w/ external Helm chart repo; run by test.sh.
+tests/test-06/input.yaml: Test input ArgoCD App for external Helm chart repo feature; run by test.sh.
+tests/test-06/result.tmp.yaml: Temp test output for test-06; actual renderer result; compared vs expect.yaml by test.sh for validation.
+tests/test-20/expect.yaml: Test expectation for test-20; expected output when rendering ArgoCD App w/ kustomize source (namespace & patches); run by test.sh.
+tests/test-20/input.yaml: Test input ArgoCD App for kustomize source (auto-detected from path); run by test.sh.
+tests/test-20/result.tmp.yaml: Temp test output for test-20; actual renderer result; compared vs expect.yaml by test.sh for validation.
+tests/test-40/expect.yaml: Test expectation for test-40; expected output when rendering ArgoCD App w/ plain directory source (as-is YAML files); run by test.sh.
+tests/test-40/input.yaml: Test input ArgoCD App for plain directory source (as-is YAML files); run by test.sh.
+tests/test-40/result.tmp.yaml: Temp test output for test-40; actual renderer result; compared vs expect.yaml by test.sh for validation.
+FILES.txt: File index; single-line desc per file; file discovery.
+LICENSE: MPL-2.0 license text; legal terms for use/modification/distribution; file-level copyleft allows proprietary integration.
+README.md: Proj doc; argocd-renderer renders ArgoCD Apps→K8s offline for CI/CD validation; features/compat/install/usage guide.
+pre-commit.sh: Git pre-commit hook; runs test.sh, blocks commits on test failure; installed via prepare.sh.
+prepare.sh: Dev env setup; symlinks pre-commit.sh as git hook; symlink auto-updates when source changes.
+renovate.json: Renovate config; automated dependency update.

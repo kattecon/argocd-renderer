@@ -2,3 +2,4 @@ Chart.lock
 
 /**/charts/
 *.tmp.yaml
+/temp/
