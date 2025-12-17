@@ -12,6 +12,7 @@
         "PYTHONUNBUFFERED",
         "pyyaml",
         "realpath",
+        "reqs",
         "TLDR",
         "tmpl"
     ]
