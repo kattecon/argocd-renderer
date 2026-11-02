@@ -27,6 +27,15 @@ spec:
     repoURL: some-url
     targetRevision: rev2
   - helm:
+      releaseName: test-07-overlap
+      valueFiles:
+      - $vals/values/[b]*.yaml
+      - $vals/values/*.yaml
+      - ../example-values-file-with-v2.yaml
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+  - helm:
       fileParameters:
       - name: v1
         path: $vals/v1-file
@@ -62,6 +71,11 @@ apiVersion: some-stuff/v1
 kind: CustomStuff
 metadata:
   name: test-07-recursive-from-b-from-c
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: test-07-overlap-from-a-v2v2v2
 ---
 apiVersion: some-stuff/v1
 kind: CustomStuff
