@@ -1,0 +1,76 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: test-07-app
+  namespace: dev
+
+spec:
+  destination:
+    namespace: dev-test-07
+    server: https://kubernetes.default.svc
+
+  sources:
+    # Ref-only source: not rendered, only provides files for '$vals/...' paths.
+    - repoURL: values-url
+      targetRevision: HEAD
+      ref: vals
+
+    # Glob: 'a.yaml' is listed explicitly too, so it is placed at its explicit position (after 'b.yaml').
+    - path: abc
+      repoURL: some-url
+      targetRevision: rev2
+      helm:
+        releaseName: test-07-glob
+        valueFiles:
+          - $vals/values/*.yaml
+          - $vals/values/a.yaml
+
+    # Recursive glob: matches are sorted, so 'sub/c.yaml' comes last.
+    - path: abc
+      repoURL: some-url
+      targetRevision: rev2
+      helm:
+        releaseName: test-07-recursive
+        valueFiles:
+          - $vals/values/**/*.yaml
+
+    # Overlapping globs: 'b.yaml' is kept at its first match (before 'a.yaml'), so v1 comes from 'a.yaml'.
+    # A plain relative value file (relative to the chart directory) works next to '$ref' paths.
+    - path: abc
+      repoURL: some-url
+      targetRevision: rev2
+      helm:
+        releaseName: test-07-overlap
+        valueFiles:
+          - $vals/values/[b]*.yaml
+          - $vals/values/*.yaml
+          - ../example-values-file-with-v2.yaml
+
+    # Refs in fileParameters, missing value files are ignored.
+    - path: abc
+      repoURL: some-url
+      targetRevision: rev2
+      helm:
+        releaseName: test-07-file-param
+        ignoreMissingValueFiles: true
+        valueFiles:
+          - $vals/values/does-not-exist-*.yaml
+          - $vals/does-not-exist.yaml
+        fileParameters:
+          - name: v1
+            path: $vals/v1-file
+        values: |
+          v2: inline
+
+    # A source with both 'ref' and 'path' is rendered and can be referenced.
+    - path: abc
+      repoURL: some-url
+      targetRevision: rev2
+      ref: charts
+      helm:
+        releaseName: test-07-ref-and-path
+        valueFiles:
+          - $charts/example-values-file-with-v2.yaml
+        values: |
+          v1: inline

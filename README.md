@@ -33,6 +33,12 @@ The following options are supported:
 - [.spec.source.helm.values](./tests/test-04/input.yaml)
 - [.spec.source.helm.valueFiles](./tests/test-04/input.yaml)
 - [.spec.source.chart](./tests/test-06/input.yaml)
+- [.spec.sources[].ref](./tests/test-07/input.yaml): `$ref/...` paths in
+  `helm.valueFiles` and `helm.fileParameters`. A source with only `ref` is
+  not rendered.
+- [glob patterns in .spec.source.helm.valueFiles](./tests/test-07/input.yaml)
+  (sorted and de-duplicated like ArgoCD 3.4+ does)
+- [.spec.source.helm.ignoreMissingValueFiles](./tests/test-07/input.yaml)
 - [kustomization.yaml](./tests/test-20/input.yaml)
 - [directory source](./tests/test-40/input.yaml)
 
@@ -45,6 +51,12 @@ The following features are not supported:
   options are not supported. The directory source itself is supported.
 - [ApplicationSet](https://argo-cd.readthedocs.io/en/stable/user-guide/application-set/)
   is not supported.
+
+Known differences from ArgoCD in the supported options:
+
+- Glob patterns in `helm.valueFiles` don't match dotfiles.
+- `$ref/...` paths are not checked to stay inside the referenced repository.
+  The script is meant to run in CI against trusted repositories.
 
 ## Repository access
 

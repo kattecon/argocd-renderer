@@ -8,9 +8,13 @@ tests/kustomize-repo-01/a-path/1.yaml: Mock repo data; multi-doc YAML w/ K8s-sty
 tests/kustomize-repo-01/a-path/2.yaml: Mock repo data; single-doc YAML w/ K8s-style resource; for test-20 kustomize resource aggregation.
 tests/kustomize-repo-01/a-path/kustomization-patch.yaml: Mock repo data; Kustomize patch file applying field modifications; for test-20 patch feature validation.
 tests/kustomize-repo-01/a-path/kustomization.yaml: Mock repo data; Kustomize config w/ resources/namespace/patches; for test-20 kustomize rendering.
-tests/repo-resolver.sh: Mock repo resolver for tests; maps URL+revision to local test dirs; example impl of argocd-renderer.py -r hook.
+tests/repo-resolver.sh: Mock repo resolver for tests; maps URL+revision to local test dirs (incl. values-repo-01 for test-07 ref sources); example impl of argocd-renderer.py -r hook.
 tests/simple-repo-01/a-path/1.yaml: Mock repo data; plain multi-doc YAML resources; for test-40 directory source.
 tests/simple-repo-01/a-path/2.yaml: Mock repo data; plain YAML w/ empty doc & comments; for test-40 edge case handling.
+tests/values-repo-01/values/a.yaml: Mock repo data; Helm values (v1); for test-07 ref source glob/explicit-position ordering.
+tests/values-repo-01/values/b.yaml: Mock repo data; Helm values (v1, v2); for test-07 ref source glob ordering.
+tests/values-repo-01/values/sub/c.yaml: Mock repo data; Helm values (v2) in subdir; for test-07 recursive '**' glob.
+tests/values-repo-01/v1-file: Mock repo data; plain text file; for test-07 '$ref' in Helm fileParameters.
 tests/helm-repo-01/abc/Chart.yaml: Mock repo data; Helm chart metadata; defines abc chart for multiple Helm rendering tests.
 tests/helm-repo-01/abc/templates/v.yaml: Mock repo data; Helm template w/ value substitution & required fields; for multiple Helm rendering tests.
 tests/helm-repo-01/abc/values.yaml: Mock repo data; Helm chart default values; for multiple tests validating value override methods.
@@ -39,6 +43,9 @@ tests/test-05/result.tmp.yaml: Temp test output for test-05; actual renderer res
 tests/test-06/expect.yaml: Test expectation for test-06; expected output when rendering ArgoCD App w/ external Helm chart repo; run by test.sh.
 tests/test-06/input.yaml: Test input ArgoCD App for external Helm chart repo feature; run by test.sh.
 tests/test-06/result.tmp.yaml: Temp test output for test-06; actual renderer result; compared vs expect.yaml by test.sh for validation.
+tests/test-07/expect.yaml: Test expectation for test-07; expected output when rendering ArgoCD App w/ ref sources, value file globs, ignoreMissingValueFiles; run by test.sh.
+tests/test-07/input.yaml: Test input ArgoCD App for ref sources ($ref valueFiles/fileParameters), value file globs, ignoreMissingValueFiles; run by test.sh.
+tests/test-07/result.tmp.yaml: Temp test output for test-07; actual renderer result; compared vs expect.yaml by test.sh for validation.
 tests/test-20/expect.yaml: Test expectation for test-20; expected output when rendering ArgoCD App w/ kustomize source (namespace & patches); run by test.sh.
 tests/test-20/input.yaml: Test input ArgoCD App for kustomize source (auto-detected from path); run by test.sh.
 tests/test-20/result.tmp.yaml: Temp test output for test-20; actual renderer result; compared vs expect.yaml by test.sh for validation.
