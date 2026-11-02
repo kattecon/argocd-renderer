@@ -1,0 +1,74 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: test-07-app
+  namespace: dev
+spec:
+  destination:
+    namespace: dev-test-07
+    server: https://kubernetes.default.svc
+  sources:
+  - ref: vals
+    repoURL: values-url
+    targetRevision: HEAD
+  - helm:
+      releaseName: test-07-glob
+      valueFiles:
+      - $vals/values/*.yaml
+      - $vals/values/a.yaml
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+  - helm:
+      releaseName: test-07-recursive
+      valueFiles:
+      - $vals/values/**/*.yaml
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+  - helm:
+      fileParameters:
+      - name: v1
+        path: $vals/v1-file
+      ignoreMissingValueFiles: true
+      releaseName: test-07-file-param
+      valueFiles:
+      - $vals/values/does-not-exist-*.yaml
+      - $vals/does-not-exist.yaml
+      values: 'v2: inline
+
+        '
+    path: abc
+    repoURL: some-url
+    targetRevision: rev2
+  - helm:
+      releaseName: test-07-ref-and-path
+      valueFiles:
+      - $charts/example-values-file-with-v2.yaml
+      values: 'v1: inline
+
+        '
+    path: abc
+    ref: charts
+    repoURL: some-url
+    targetRevision: rev2
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: test-07-glob-from-a-from-b
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: test-07-recursive-from-b-from-c
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: test-07-file-param-from-ref-file-inline
+---
+apiVersion: some-stuff/v1
+kind: CustomStuff
+metadata:
+  name: test-07-ref-and-path-inline-v2v2v2

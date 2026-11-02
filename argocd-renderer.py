@@ -11,7 +11,9 @@
 # ------------------------------------------------------------------------------------------
 
 import argparse
+import contextlib
 import dataclasses
+import glob
 import os
 import subprocess
 import tempfile
@@ -20,7 +22,7 @@ import yaml
 from dataclasses import dataclass
 
 # Python pre 3.9 doesn't support list[str], but works with List[str].
-from typing import List, Type, Union, Tuple
+from typing import Dict, List, Type, Union, Tuple
 
 
 APP_NAME = "ak-argocd-renderer"
@@ -34,16 +36,18 @@ def exec_capture_output(cmd_args: List[str]) -> str:
     return subprocess.check_output(cmd_args, text=True)
 
 
-def resolve_repo(*, url: str, revision: str, temp_dir: str) -> None:
+def resolve_repo(*, url: str, revision: str, temp_dir: str) -> str:
     global repo_resolver
 
+    path = ""
     if repo_resolver:
         print("    Checking the repo path...", flush=True)
         path = exec_capture_output([repo_resolver, url, revision, temp_dir]).strip()
-        path = os.path.abspath(path)
-        return path
-    else:
-        return ""
+
+    if path == "":
+        raise ValueError(f"Failed to resolve the repository path...")
+
+    return os.path.abspath(path)
 
 
 def parse_yaml_file(yaml_file: str) -> List[dict]:
@@ -95,6 +99,92 @@ def dump_as_yaml_for_debug(d: dict, *, indent: str) -> None:
     return "\n".join([f"{indent}{l}" for l in yaml.dump(d).split("\n")])
 
 
+@contextlib.contextmanager
+def source_errors(source: "ArgocdAppSource"):
+    """Add the source definition to any error raised while processing it."""
+    try:
+        yield
+    except Exception as e:
+        resource_yaml = dump_as_yaml_for_debug(source.orig_resource, indent="    ")
+        raise ValueError(
+            f"Failed to process argocd application source:\n{resource_yaml}"
+        ) from e
+
+
+# NOTE: Unlike ArgoCD, paths are not checked to stay inside the referenced repository.
+# The renderer runs in CI against trusted repositories, so this is not a security boundary.
+def resolve_ref_path(path: str, ref_paths: Dict[str, str]) -> str:
+    """Resolve '$ref/some/file' to the path inside the checkout of the source with 'ref: ref'."""
+    if not path.startswith("$"):
+        return path
+
+    ref, _, rest = path[1:].partition("/")
+    if ref not in ref_paths:
+        raise ValueError(
+            f"Path {repr(path)} uses unknown ref {repr(ref)}. Known refs: {sorted(ref_paths)}"
+        )
+
+    return os.path.join(ref_paths[ref], rest)
+
+
+def is_remote_url(path: str) -> bool:
+    return "://" in path
+
+
+def is_glob(path: str) -> bool:
+    return any(c in path for c in "*?[")
+
+
+def expand_value_files(
+    value_files: List[str], *, base_dir: str, ignore_missing: bool
+) -> List[str]:
+    """
+    Expand globs in helm value files the same way as ArgoCD does:
+    - glob matches are sorted and inserted at the position of the pattern,
+    - a file matched by a glob, but also listed explicitly, is kept at its explicit position,
+    - a file matched by multiple globs is kept at its first match,
+    - a glob matching nothing is an error unless missing value files are ignored.
+    Local paths are resolved against base_dir and returned absolute.
+    Note: unlike ArgoCD, globs don't match dotfiles.
+    """
+    # Explicitly listed files are already placed, so globs skip them.
+    seen = {
+        os.path.abspath(os.path.join(base_dir, f))
+        for f in value_files
+        if not is_remote_url(f) and not is_glob(f)
+    }
+
+    result = []
+    for value_file in value_files:
+        if is_remote_url(value_file):
+            result.append(value_file)
+            continue
+
+        path = os.path.abspath(os.path.join(base_dir, value_file))
+        if not is_glob(value_file):
+            if ignore_missing and not os.path.exists(path):
+                print(f"    Ignoring missing value file {repr(value_file)}.")
+                continue
+            result.append(path)
+            continue
+
+        matches = sorted(
+            f for f in glob.glob(path, recursive=True) if os.path.isfile(f)
+        )
+        if not matches:
+            if ignore_missing:
+                print(f"    Ignoring value file glob {repr(value_file)} matching no files.")
+                continue
+            raise ValueError(f"Values file glob {repr(value_file)} matched no files")
+
+        for match in matches:
+            if match not in seen:
+                seen.add(match)
+                result.append(match)
+
+    return result
+
+
 # ################################################################################################
 # Models.
 
@@ -113,12 +203,18 @@ class ArgocdAppSourceHelm:
     release_name: Union[str, None] = None
     file_parameters: List[Tuple[str, str]] = dataclasses.field(default_factory=list)
     value_files: List[str] = dataclasses.field(default_factory=list)
+    ignore_missing_value_files: bool = False
 
     @staticmethod
     def from_resource(resource: dict) -> "ArgocdAppSourceHelm":
         err_path = ".spec.source(s).helm"
 
         release_name = get_str(resource, "releaseName", err_path=err_path, req=False)
+
+        ignore_missing_value_files = (
+            get_bool(resource, "ignoreMissingValueFiles", err_path=err_path, req=False)
+            or False
+        )
 
         values = {}
         values.update(
@@ -170,6 +266,7 @@ class ArgocdAppSourceHelm:
             release_name=release_name,
             file_parameters=file_parameters,
             value_files=value_files,
+            ignore_missing_value_files=ignore_missing_value_files,
         )
 
 
@@ -180,7 +277,13 @@ class ArgocdAppSource:
     target_revision: str
     helm: Union[ArgocdAppSourceHelm, None]
     chart: Union[str, None]
+    ref: Union[str, None]
     orig_resource: dict
+
+    @property
+    def is_ref_only(self) -> bool:
+        """Ref-only sources are not rendered, they only provide files for '$ref/...' paths."""
+        return self.ref is not None and self.path is None and self.chart is None
 
     @staticmethod
     def from_resource(resource: dict) -> "ArgocdAppSource":
@@ -192,8 +295,12 @@ class ArgocdAppSource:
         )
 
         chart = get_str(resource, "chart", err_path=err_path, req=False)
-        if chart is None and path is None:
-            raise ValueError(f"Either 'chart' or 'path' must be given")
+        ref = get_str(resource, "ref", err_path=err_path, req=False)
+        if chart is None and path is None and ref is None:
+            raise ValueError(f"One of 'chart', 'path' or 'ref' must be given")
+
+        if ref is not None and chart is not None:
+            raise ValueError(f"Sources with 'ref' cannot include 'chart'")
 
         helm = get_dict(resource, "helm", err_path=err_path, req=False)
         if helm is not None:
@@ -213,6 +320,7 @@ class ArgocdAppSource:
             target_revision=target_revision,
             helm=helm,
             chart=chart,
+            ref=ref,
             orig_resource=resource,
         )
 
@@ -379,27 +487,53 @@ class ArgocdRenderer:
             f"Processing argocd application {repr(app.id)} from {repr(resource_ctx.origin)}..."
         )
 
-        for source in app.sources:
-            print(
-                f"  Source:  {repr(source.repo_url)} @ {repr(source.target_revision)}  /  {repr(source.path or source.chart)}"
-            )
+        with tempfile.TemporaryDirectory(prefix=APP_NAME) as temp_dir:
+            make_secure(temp_dir)
 
-            with tempfile.TemporaryDirectory(prefix=APP_NAME) as temp_dir:
-                make_secure(temp_dir)
+            # Check out the repos first, so '$ref/...' paths work in any source.
+            repo_paths = []
+            ref_paths = {}
+            for i, source in enumerate(app.sources):
+                repo_path = ""
+                with source_errors(source):
+                    if source.chart is None:
+                        print(
+                            f"  Repo:  {repr(source.repo_url)} @ {repr(source.target_revision)}"
+                        )
+                        repo_temp_dir = os.path.join(temp_dir, f"repo-{i}")
+                        os.mkdir(repo_temp_dir)
+                        repo_path = resolve_repo(
+                            url=source.repo_url,
+                            revision=source.target_revision,
+                            temp_dir=repo_temp_dir,
+                        )
 
-                try:
-                    self.__process_argocd_application_source(
-                        resource_ctx, app, source, temp_dir
-                    )
-                except Exception as e:
-                    resource_yaml = dump_as_yaml_for_debug(
-                        source.orig_resource, indent="    "
-                    )
-                    raise ValueError(
-                        f"Failed to process argocd application source:\n{resource_yaml}"
-                    ) from e
+                    if source.ref is not None:
+                        if source.ref in ref_paths:
+                            raise ValueError(f"Duplicate ref {repr(source.ref)}")
+                        ref_paths[source.ref] = repo_path
+
+                repo_paths.append(repo_path)
 
             print("")
+
+            for i, (source, repo_path) in enumerate(zip(app.sources, repo_paths)):
+                if source.is_ref_only:
+                    continue
+
+                print(
+                    f"  Source:  {repr(source.repo_url)} @ {repr(source.target_revision)}  /  {repr(source.path or source.chart)}"
+                )
+
+                source_temp_dir = os.path.join(temp_dir, f"source-{i}")
+                os.mkdir(source_temp_dir)
+
+                with source_errors(source):
+                    self.__process_argocd_application_source(
+                        resource_ctx, app, source, source_temp_dir, repo_path, ref_paths
+                    )
+
+                print("")
 
     def __process_argocd_application_source(
         self,
@@ -407,30 +541,19 @@ class ArgocdRenderer:
         app: ArgocdApp,
         source: ArgocdAppSource,
         temp_dir: str,
+        resolved_repo_path: str,
+        ref_paths: Dict[str, str],
     ) -> None:
-        if source.chart is None:
-            resolved_repo_path = resolve_repo(
-                url=source.repo_url,
-                revision=source.target_revision,
-                temp_dir=temp_dir,
-            )
-            if resolved_repo_path == "":
-                raise ValueError(f"Failed to resolve the repository path...")
-        else:
-            resolved_repo_path = ""
-
         if source.helm is not None or source.chart is not None:
             kind = "helm"
         else:
-            kind = None
-            if resolved_repo_path != "":
-                src_dir = resolved_repo_path + "/" + source.path
-                if os.path.exists(os.path.join(src_dir, "Chart.yaml")):
-                    kind = "helm"
-                elif os.path.exists(os.path.join(src_dir, "kustomization.yaml")):
-                    kind = "kustomize"
-                else:
-                    kind = "simple"
+            src_dir = resolved_repo_path + "/" + source.path
+            if os.path.exists(os.path.join(src_dir, "Chart.yaml")):
+                kind = "helm"
+            elif os.path.exists(os.path.join(src_dir, "kustomization.yaml")):
+                kind = "kustomize"
+            else:
+                kind = "simple"
 
         if kind == "helm":
             if source.helm is None:
@@ -438,6 +561,22 @@ class ArgocdRenderer:
                 source = dataclasses.replace(
                     source, helm=ArgocdAppSourceHelm(values={})
                 )
+
+            # Resolve '$ref/...' paths, so the handler only sees ordinary paths.
+            helm = source.helm
+            source = dataclasses.replace(
+                source,
+                helm=dataclasses.replace(
+                    helm,
+                    value_files=[
+                        resolve_ref_path(f, ref_paths) for f in helm.value_files
+                    ],
+                    file_parameters=[
+                        (name, resolve_ref_path(path, ref_paths))
+                        for name, path in helm.file_parameters
+                    ],
+                ),
+            )
 
             handler = self.__process_argocd_application_helm_source
         elif kind == "kustomize":
@@ -505,6 +644,10 @@ class ArgocdRenderer:
     ) -> None:
         print("    Preparing to process with helm...", flush=True)
 
+        # Relative value files are relative to the chart directory (helm runs there).
+        chart_path = None if source.chart else resolved_repo_path + "/" + source.path
+        base_dir = chart_path or os.getcwd()
+
         # Write values file.
         values_file = os.path.join(temp_dir, "values.yaml")
         with open(values_file, "w") as file:
@@ -520,7 +663,12 @@ class ArgocdRenderer:
         if source.chart:
             helm_args += ["--repo", source.repo_url]
 
-        for value_file in source.helm.value_files:
+        value_files = expand_value_files(
+            source.helm.value_files,
+            base_dir=base_dir,
+            ignore_missing=source.helm.ignore_missing_value_files,
+        )
+        for value_file in value_files:
             helm_args += ["--values", value_file]
 
         if app.destination_namespace:
@@ -546,12 +694,8 @@ class ArgocdRenderer:
         try:
             helm_args.append(source.helm.release_name or app.name)
 
-            if source.chart:
-                helm_args.append(source.chart)
-            else:
-                chart_path = resolved_repo_path + "/" + source.path
-                helm_args.append(chart_path)
-                os.chdir(chart_path)
+            helm_args.append(source.chart or chart_path)
+            os.chdir(base_dir)
 
             exec_capture_output(helm_args)
         finally:

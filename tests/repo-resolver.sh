@@ -26,6 +26,10 @@ if [ "$REPO_URL" = "some-url-k" -a "$REVISION" = "rev3" ]; then
     RESULT="./tests/kustomize-repo-01"
 fi
 
+if [ "$REPO_URL" = "values-url" -a "$REVISION" = "HEAD" ]; then
+    RESULT="./tests/values-repo-01"
+fi
+
 if [ "$REPO_URL" = "https://example.com" -a "$REVISION" = "HEAD" ]; then
     RESULT="./tests/simple-repo-01"
 fi

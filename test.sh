@@ -44,6 +44,7 @@ test "test-03"
 test "test-04"
 test "test-05" --helm-args="['--set', 'v1=via-arg-arg']"
 test "test-06"
+test "test-07"
 
 # ---- Kustomize
 test "test-20"
