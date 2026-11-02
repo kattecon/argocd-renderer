@@ -408,6 +408,11 @@ class ArgocdApp:
 
         sources = [ArgocdAppSource.from_resource(source) for source in sources]
 
+        refs = [source.ref for source in sources if source.ref is not None]
+        for ref in refs:
+            if refs.count(ref) > 1:
+                raise ValueError(f"Duplicate ref {repr(ref)} in .spec.sources")
+
         destination = get_dict(spec, "destination", err_path=".spec", req=False) or {}
         destination_namespace = get_str(
             destination, "namespace", err_path=".spec.destination", req=False
@@ -541,7 +546,8 @@ class ArgocdRenderer:
             make_secure(temp_dir)
 
             # Phase 1: check out all repos, so every ref is known before rendering starts.
-            checkouts, ref_paths = self.__check_out_sources(app, temp_dir)
+            checkouts = self.__check_out_sources(app, temp_dir)
+            ref_paths = {s.ref: path for s, path in checkouts if s.ref is not None}
 
             # Phase 2: render each source. Ref-only sources just provide files to the others.
             for i, (source, repo_path) in enumerate(checkouts):
@@ -562,40 +568,39 @@ class ArgocdRenderer:
 
     def __check_out_sources(
         self, app: ArgocdApp, temp_dir: str
-    ) -> Tuple[List[Tuple[ArgocdAppSource, Union[str, None]]], Dict[str, str]]:
+    ) -> List[Tuple[ArgocdAppSource, Union[str, None]]]:
         """
         Resolve the repo of every source of the app.
 
-        Returns:
-        - (source, repo path) pairs in source order. The path is None for a chart from a helm
-          repo, which helm downloads itself.
-        - ref name -> repo path, for resolving '$ref/...' paths.
+        Returns (source, repo path) pairs in source order. The path is None for a chart from
+        a helm repo, which helm downloads itself. Sources with the same repo and revision
+        share one checkout.
         """
         checkouts = []
-        ref_paths = {}
+        repo_paths = {}  # (repo url, revision) -> repo path
         for i, source in enumerate(app.sources):
             repo_path = None
             with annotate_source_errors(source):
                 if source.chart is None:
-                    print(
-                        f"  Repo:  {repr(source.repo_url)} @ {repr(source.target_revision)}"
-                    )
-                    repo_path = resolve_repo(
-                        url=source.repo_url,
-                        revision=source.target_revision,
-                        temp_dir=make_subdir(temp_dir, f"repo-{i}"),
-                    )
+                    key = (source.repo_url, source.target_revision)
+                    if key not in repo_paths:
+                        print(
+                            f"  Repo:  {repr(source.repo_url)} @ {repr(source.target_revision)}"
+                        )
+                        repo_paths[key] = resolve_repo(
+                            url=source.repo_url,
+                            revision=source.target_revision,
+                            temp_dir=make_subdir(temp_dir, f"repo-{i}"),
+                        )
+                    repo_path = repo_paths[key]
 
                 if source.ref is not None:
-                    if source.ref in ref_paths:
-                        raise ValueError(f"Duplicate ref {repr(source.ref)}")
-                    ref_paths[source.ref] = repo_path
                     print(f"  Ref source {repr(source.ref)} -> {repr(repo_path)}")
 
             checkouts.append((source, repo_path))
 
         print("")
-        return checkouts, ref_paths
+        return checkouts
 
     def __process_argocd_application_source(
         self,
@@ -603,41 +608,26 @@ class ArgocdRenderer:
         app: ArgocdApp,
         source: ArgocdAppSource,
         temp_dir: str,
-        resolved_repo_path: str,
+        resolved_repo_path: Union[str, None],
         ref_paths: Dict[str, str],
     ) -> None:
-        if source.helm is not None or source.chart is not None:
-            kind = "helm"
-        else:
-            src_dir = source.source_dir(resolved_repo_path)
-            if os.path.exists(os.path.join(src_dir, "Chart.yaml")):
-                kind = "helm"
-            elif os.path.exists(os.path.join(src_dir, "kustomization.yaml")):
-                kind = "kustomize"
-            else:
-                kind = "simple"
+        src_dir = None if source.chart else source.source_dir(resolved_repo_path)
 
-        if kind == "helm":
-            if source.helm is None:
-                # Looks like the app is referring a helm chart without using values in the app definition.
-                source = dataclasses.replace(
-                    source, helm=ArgocdAppSourceHelm(values={})
-                )
+        def has_file(name: str) -> bool:
+            return src_dir is not None and os.path.exists(os.path.join(src_dir, name))
+
+        if source.helm is not None or source.chart is not None or has_file("Chart.yaml"):
+            # A chart without 'helm' in the app definition just uses the chart's own values.
+            helm = source.helm or ArgocdAppSourceHelm(values={})
 
             # Resolve '$ref/...' paths here, so the helm handler only sees ordinary paths.
-            source = dataclasses.replace(
-                source, helm=source.helm.with_resolved_refs(ref_paths)
-            )
+            source = dataclasses.replace(source, helm=helm.with_resolved_refs(ref_paths))
 
             handler = self.__process_argocd_application_helm_source
-        elif kind == "kustomize":
+        elif has_file("kustomization.yaml"):
             handler = self.__process_argocd_application_kustomize_source
-        elif kind == "simple":
-            handler = self.__process_argocd_application_simple_source
         else:
-            raise ValueError(
-                f"Unknown/unsupported source type in argocd application {repr(app.id)} in {repr(resource_ctx.origin)}"
-            )
+            handler = self.__process_argocd_application_simple_source
 
         handler(resource_ctx, app, source, temp_dir, resolved_repo_path)
 

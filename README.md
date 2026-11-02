@@ -40,7 +40,6 @@ The following options are supported:
   (sorted and de-duplicated like ArgoCD 3.4+ does)
 - [.spec.source.helm.ignoreMissingValueFiles](./tests/test-07/input.yaml)
 - [kustomization.yaml](./tests/test-20/input.yaml)
-
 - [directory source](./tests/test-40/input.yaml)
 
 The following features are not supported:
